@@ -1,0 +1,200 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<time.h>
+#include<conio.h>
+#include<windows.h>
+
+// color set
+void setcolor(int num)
+{
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), num);
+}
+// num set
+int num_set (int num , int *temp)
+{
+	int i,j;
+
+	if (num <= 99 || num >= 1000)
+		return -1; // nope
+
+	for (i = 2; i >= 0; i--)
+	{
+		*(temp + i) = num % 10;
+		num = (num - *(temp + i)) / 10;
+		for (j = i + 1; j < 3; j++)
+			if (*(temp + j) == *(temp + i))
+				return -1; // nope
+	}
+	return 0; // okay
+}
+// compare == 0 : plyaer / compare == 1 : computer
+void prediction(int compare , int *temp , int out[] , int out_point , int *lately , int *lately_move)
+{
+	int i,j,num,again;
+
+	if (compare == 0) // player
+	{
+		do
+		{
+			setcolor(10);
+			printf("Player Attack -> \n");
+			setcolor(7);
+			printf("Prediction Computer Num :: ");
+			scanf_s("%d", &num); // prediction computer num
+		} while (num_set(num, temp));
+	}
+
+	else if (compare == 1) // computer
+	{
+		setcolor(12);
+		printf("Computer Attack -> \n");
+		setcolor(7);
+
+		while (1)
+		{
+			again = 0;
+
+			do
+			{
+				num = rand() % 900 + 100;
+			} while (num_set(num, temp));
+
+			for (i = 0; i < 3; i++)
+				for (j = 0; j < out_point; j++)
+					if (*(temp + i) == out[j])
+						again = 1;
+
+			for (i = 0; i < 6; i++)
+				if (num == *(lately + i)) // prediction without eqyal num
+					again = 1;
+
+			if (again == 0)
+				break;
+		}
+		*(lately + *lately_move) = num; // lately num save
+		*lately_move = (*lately_move + 1) % 6;
+		printf("Prediction Player Num :: %d%d%d \n",*(temp+0), *(temp + 1), *(temp + 2));
+	}
+}
+// recognize
+int recognize(int compare , int temp[] , int check[] , int *c_out , int *out_point)
+{
+	int i, j;
+	int strike = 0, ball = 0, out = 0;
+
+	for (i = 0; i < 3; i++)
+	{
+		for (j = 0; j < 3; j++)
+		{
+			if (temp[i] == check[j])
+			{
+				if (i == j)
+					strike++;
+				else if (i != j)
+					ball++;
+			}
+		}
+		if (temp[i] != check[0] && temp[i] != check[1] && temp[i] != check[2])
+		{
+			out++;
+			if (compare == 1) // compare == 1 -> computer
+			{
+				*(c_out + *(out_point)) = temp[i];
+				*(out_point) = *(out_point)+1;
+			}
+		}
+	}
+	setcolor(15);
+	printf("STRIKE = %d BALL = %d OUT = %d\n", strike, ball, out);
+	setcolor(7);
+	if (strike == 3)
+		return 1; // win
+	else
+		return 0; // continue
+}
+// more game ?
+void re_game()
+{
+	int key;
+
+	printf("\nMore Gmae ? ( ⓨ Yes / ⓝ No )");
+
+	while (1)
+	{
+		if (_kbhit())
+		{
+			key = _getch();
+
+			if (key == 121) // y
+			{
+				system("cls");
+				break;
+			}
+			else if (key == 110) // n
+				exit(1);
+		}
+	}
+}
+void main()
+{
+	int player[3];
+	int computer[3];
+	int temp[3];
+	int out[7], out_point;
+	int num,turn_count;
+	int lately[5], lately_move; // prediction without eqyal num
+
+	srand((unsigned)time(NULL));
+
+	while (1)
+	{
+		lately_move = 0;
+
+		setcolor(11);
+		printf("\nConsole Base Ball Game\n\n");
+		setcolor(7);
+
+		do
+		{
+			printf("Player Num Set :: ");
+			scanf_s("%d", &num); // player num set
+			printf("\n");
+		} while (num_set(num, player));
+
+		do
+		{
+			num = rand() % 900 + 100; // computer num set
+		} while (num_set(num, computer));
+
+		printf("Computer Num Set Clear\n");
+
+		turn_count = 1;
+		out_point = 0;
+
+		while (1)
+		{
+			printf("\n( %d ) ", turn_count); // player
+			prediction(0, temp, out, out_point, lately, &lately_move);
+			if (recognize(0, temp, computer, out, &out_point)) // predictioned computer num
+			{
+				setcolor(14);
+				printf("\nPlyaer Win\n");
+				setcolor(7);
+				re_game();
+				break;
+			}
+
+			printf("\n( %d ) ", turn_count); // computer
+			prediction(1, temp, out, out_point, lately, &lately_move);
+			if (recognize(1, temp, player, out, &out_point)) // predictioned player num
+			{
+				setcolor(14);
+				printf("\nComputer Win\n");
+				setcolor(7);
+				re_game();
+				break;
+			}
+			turn_count++;
+		}
+	}
+}
