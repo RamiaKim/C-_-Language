@@ -1,0 +1,475 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <conio.h>
+#include <time.h>
+#include <math.h>
+#include <windows.h>
+#include <iostream>
+#include "fmod.hpp"
+
+#pragma	comment (lib, "fmodex_vc.lib")
+
+using namespace FMOD;
+using namespace std;
+
+System*			pSystem;
+Sound*			pSound[1]; //	사운드의 개수만큼 필요
+Channel*		pChannel[2]; //	동시에 출력될 사운드 만큼 필요
+
+#define π  3.14159265358979 // 파이값
+#define GRAVITY 9.8 // 중력값
+#define P_STARTPOINT_X 8 // 시작 x
+#define STARTPOINT_Y 28 // 시작 y
+
+void movexy(int x, int y)
+{
+	COORD Pos = { x , y };
+	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), Pos);
+}
+void setcolor(int num)
+{
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), num);
+}
+void wall_set(int *wall_x_pos_1,int *wall_x_pos_2, int *wall_y_pos_1,int * wall_y_pos_2, int p_x_pos, int *c_x_pos, int *wall_sub)
+{
+	int i;
+
+	if (*wall_sub == 1)
+	{
+		while (1)
+		{
+			*wall_x_pos_1 = (rand() % 15) * 2 + 10 + p_x_pos;
+			*wall_x_pos_2 = (rand() % 15) * 2 + 10 + *wall_x_pos_1;
+
+			if (*wall_x_pos_1 > p_x_pos && *(c_x_pos + 1) > *wall_x_pos_2)
+				break;
+		}
+		*wall_sub = *wall_sub - 1;
+	}
+	
+			setcolor(15);
+			*(wall_y_pos_1 + 0) = 27;
+			*(wall_y_pos_1 + 1) = 28;
+			movexy(*wall_x_pos_1, *(wall_y_pos_1 + 0)); printf("□");
+			movexy(*wall_x_pos_1, *(wall_y_pos_1 + 1)); printf("□");
+
+			*(wall_y_pos_2 + 0) = 27;
+			*(wall_y_pos_2 + 1) = 28;
+			movexy(*wall_x_pos_2, *(wall_y_pos_2 + 0)); printf("□");
+			movexy(*wall_x_pos_2, *(wall_y_pos_2 + 1)); printf("□");
+
+	setcolor(7);
+}
+void whoes_clear_target(int who, int p_life_count, int c_life_count, int p_x_pos, int *c_x_pos)
+{
+	int i;
+
+	printf("\a");
+
+	setcolor(14);
+
+	if (who == 0) // player clear target
+	{
+		for (i = 0; i < 3; i++)
+		{
+			movexy(*(c_x_pos + i), 28); printf("　");
+		}
+
+		for (i = 0; i < 3; i++)
+		{
+			movexy(*(c_x_pos + i) - i, 28 - i);
+			switch (i)
+			{
+			case 1: printf("*"); break;
+			case 2:printf("**"); break;
+			case 3:printf("***"); break;
+			}
+		}
+
+		setcolor(7);
+	}
+	else if (who == 1) // computer clear target
+	{
+		for (i = 0; i < 3; i++)
+		{
+			movexy(p_x_pos, 28 - i); printf("　");
+		}
+
+		for (i = 0; i < 3; i++)
+		{
+			movexy(p_x_pos - i, 28 - i);
+			switch (i)
+			{
+			case 1: printf("*"); break;
+			case 2:printf("**"); break;
+			case 3:printf("***"); break;
+			}
+		}
+
+		setcolor(7);
+	}
+}
+void player_tank_set(int *p_x_pos, int *p_y_pos, int wall_x_pos_1)
+{
+	int move_count, key;
+
+	move_count = 3;
+
+	while (1)
+	{
+
+		setcolor(2);
+		movexy(*p_x_pos, *p_y_pos); printf("凸");
+		setcolor(7);
+
+		if (move_count == 0)
+			break;
+
+		if (_kbhit())
+		{
+			movexy(*p_x_pos, *p_y_pos - 2); printf("　");
+			movexy(*p_x_pos, *p_y_pos - 1); printf("　");
+			movexy(*p_x_pos, *p_y_pos); printf("　");
+
+			key = _getch();
+
+			switch (key)
+			{
+			case 75: // 좌
+				if (*p_x_pos >= 2)
+					*p_x_pos = *p_x_pos - 2;
+				move_count--;
+				break;
+			case 77: // 우
+				if (*p_x_pos <= 116&& wall_x_pos_1>*p_x_pos)
+					*p_x_pos = *p_x_pos + 2;
+				move_count--;
+				break;
+			}
+		}
+
+		movexy(80, 32); printf("ㅗ = %d move_count = %d",*p_x_pos, move_count);
+	}
+}
+void sketch(int who, int p_x_pos, int p_y_pos, int *c_x_pos)
+{ // c_x_pos[0] -> O / c_x_pos[1] -> C / c_x_pos[2] -> M
+	
+	if (who == 0)
+	{
+		setcolor(2);
+		movexy(p_x_pos, p_y_pos); printf("凸");
+	}
+	else if (who == 1)
+	{
+		movexy(80, 31); printf("C = %d O = %d M = %d", c_x_pos[1], c_x_pos[0], c_x_pos[2]);
+
+		movexy(*(c_x_pos + 1), 28); printf("　");
+		movexy(*(c_x_pos + 0), 28); printf("　");
+		movexy(*(c_x_pos + 2), 28); printf("　");
+
+		setcolor(12);
+		movexy(*(c_x_pos + 1), 28); printf("C");
+		movexy(*(c_x_pos + 0), 28); printf("O");
+		movexy(*(c_x_pos + 2), 28); printf("M");
+		setcolor(7);
+	}
+}
+void map_sketch()
+{
+	int i, j;
+
+	setcolor(15);
+	for (i = 0; i < 30; i++)
+	{
+		printf("■");
+		for (j = 0; j < 60; j++)
+			if (i == 29)
+				printf("■");
+			else
+				printf("  ");
+		printf("■\n");
+	}
+	setcolor(7);
+}
+void word(int choose, int x, int y, int color_num)
+{
+	setcolor(color_num);
+
+	switch (choose)
+	{
+	case 1:
+		movexy(x, y + 0); printf("●●●　●●●　●●●　●●●　●●●　　●●●");
+		movexy(x, y + 1); printf("　●　　　●　　　●　　　●　　　●●　　　●　");
+		movexy(x, y + 2); printf("　●　　　●　　　●　　　●　　　●　●　　●　");
+		movexy(x, y + 3); printf("　　●　●　●　●　　　　●　　　●　●　　●　");
+		movexy(x, y + 4); printf("　　●　●　●　●　　　　●　　　●　　●　●　");
+		movexy(x, y + 5); printf("　　●　●　●　●　　　　●　　　●　　●　●　");
+		movexy(x, y + 6); printf("　　　●　　　●　　　　　●　　　●　　　●●　");
+		movexy(x, y + 7); printf("　　　●　　　●　　　　　●　　　●　　　●●　");
+		movexy(x, y + 8); printf("　　　●　　　●　　　　●●●　●●●　　　●　");
+		break;
+	case 2:
+		movexy(x, y + 0); printf("●●●　　　　　　　●●●●　　　　●●●　●　●●●●●●　");
+		movexy(x, y + 1); printf("　●　　　　　　　●　　　　●　　●　　　●●　　●　　　　●");
+		movexy(x, y + 2); printf("　●　　　　　　●　　　　　　●　●　　　　●　　●　　　　　");
+		movexy(x, y + 3); printf("　●　　　　　　●　　　　　　●　　●●　　　　　●　　　●　");
+		movexy(x, y + 4); printf("　●　　　　　　●　　　　　　●　　　　●●　　　●●●●●　");
+		movexy(x, y + 5); printf("　●　　　　　　●　　　　　　●　　　　　　●　　●　　　●　");
+		movexy(x, y + 6); printf("　●　　　　●　●　　　　　　●　●　　　　●　　●　　　　　");
+		movexy(x, y + 7); printf("　●　　　●　　　●　　　　●　　●●　　　●　　●　　　　●");
+		movexy(x, y + 8); printf("●●●●●●　　　　●●●●　　　●　●●●　　●●●●●●　");
+		break;
+	}
+
+	setcolor(7);
+}
+int parabola_moving
+(int com_or_player, int start_x_pos, int start_y_pos, double speed, double angle, int p_x_pos, int *c_x_pos, int wall_x_pos_1, int wall_x_pos_2)
+{
+	int v_x, v_y; // 동적 x , y
+
+	float radian; // 라디안 값
+	float time = 0; // 시간
+	float time_end; // 시간 끝
+
+	int com_sub=-1;
+
+	radian = angle * π / 180; // 파이값 -> 라디안 변환
+	time_end = 2 * speed*sin(radian) / GRAVITY; // 시간 설정
+
+	while (1)
+	{
+		v_x = (speed * cos(radian) * time); // 동적 x
+		v_y = (speed * sin(radian)* time - (GRAVITY*time*time) / 2)*(-1); // 동적 y
+
+		movexy(80, 30); printf("V_x = %d V_y = %d", v_x, v_y);
+
+		if (com_or_player == 0) // 색 설정
+			setcolor(10);
+		else if (com_or_player == 1)
+			setcolor(12);
+
+		if (com_or_player == 1) // 포탄 그리기
+			com_sub = 1;
+			
+		if (v_x*(com_sub) <= 28)
+		{
+			movexy(v_x + start_x_pos, v_y + start_y_pos);
+			printf("●");
+		}
+
+		time = time + 0.05; // 시간 계산
+		Sleep(time);
+		Sleep(20);
+
+		if (v_y >= 0)
+		{
+			if (wall_x_pos_1 - 1 <= v_x + p_x_pos + 3 && wall_x_pos_1 + 1 >= v_x + p_x_pos + 3)
+				break;
+			else if (wall_x_pos_2 - 1 <= v_x + p_x_pos + 3 && wall_x_pos_2 + 1 >= v_x + p_x_pos + 3)
+				break;
+
+			if (wall_x_pos_1 - 1 <= v_x + *(c_x_pos+0) + 3 && wall_x_pos_1 + 1 >= v_x + *(c_x_pos + 0) + 3)
+				break;
+			else if (wall_x_pos_2 - 1 <= v_x + *(c_x_pos + 0) + 3 && wall_x_pos_2 + 1 >= v_x + *(c_x_pos + 0) + 3)
+				break;
+		}
+
+		if (com_or_player == 0) // 유저 판정문
+		{
+			if (time >= time_end)
+			{
+				if (v_y <= 0)
+				{
+					if (com_or_player == 0)
+					{
+						if (*(c_x_pos + 0) - 2 <= v_x + p_x_pos + 3 && *(c_x_pos + 0) + 2 >= v_x + p_x_pos + 3 || *(c_x_pos + 0) == +p_x_pos + 3 || *(c_x_pos + 1) - 1 <= v_x + p_x_pos + 3 && *(c_x_pos + 2) + 1 >= v_x + p_x_pos + 3)
+							return 0; // 컴퓨터 격추
+					}
+					break;
+				}
+			}
+		}
+
+		else if (com_or_player == 1) // 컴퓨터 판정문
+		{
+			if (time >= time_end)
+			{
+				if (v_y <= 0)
+				{
+					if (com_or_player == 1)
+					{
+						if (p_x_pos - 4 <= v_x + *(c_x_pos + 0) && p_x_pos + 4 >= v_x + *(c_x_pos + 0))
+							return 1; // 플레이어 격추
+					}
+					break;
+				}
+			}
+		}
+
+		movexy(v_x + start_x_pos, v_y + start_y_pos); // 지우기
+		printf("　");
+		setcolor(7);
+	}
+}
+void main()
+{
+	System_Create(&pSystem); //사운드 시스템을 생성
+	pSystem->init(2, FMOD_INIT_NORMAL, NULL); // 사운드 시스템 기본 세팅
+	pSystem->createSound("background.mp3", FMOD_HARDWARE, NULL, &pSound[0]); //	음악파일 생성
+
+	bool	bPlay = true;  // 음악파일 변수
+	bool	IsBGPlaying = false;
+	bool	IsEffectPlaying = false;
+	float	fVolume = 0.7;
+
+	int tree_choose_sub; // 포트리스 변수
+	int power, angle;
+	int p_x_pos = P_STARTPOINT_X, p_y_pos = STARTPOINT_Y;
+	int c_x_pos[3];
+	int who = -1, i;
+	int com_choice_sub, com_rand_power_sub, com_rand_angle_sub;
+
+	int p_life_count = 3, c_life_count = 3;
+
+	int wall_x_pos_1,wall_x_pos_2, wall_y_pos_1[2],wall_y_pos_2[2],wall_sub=1;
+
+	srand((unsigned)time(NULL)); // 난수 초기화
+
+	pSystem->playSound(FMOD_CHANNEL_REUSE, pSound[0], false, &pChannel[0]); // 음악 실행
+	pChannel[0]->setVolume(fVolume); // 음악 볼륨 설정
+
+	system("mode con:cols=125 lines=35"); // 콘솔 크기 설정
+
+	c_x_pos[0] = ((rand() % 20) * 2) + 76; // 첫 컴퓨터 위치 설정
+	c_x_pos[1] = c_x_pos[0] - 1;
+	c_x_pos[2] = c_x_pos[0] + 1;
+
+	while (1)
+	{
+		system("cls");
+
+		map_sketch();
+
+		Sleep(250);
+
+		wall_set(&wall_x_pos_1, &wall_x_pos_2, wall_y_pos_1, wall_y_pos_2, p_x_pos, c_x_pos, &wall_sub);
+
+		Sleep(250);
+
+		sketch(1, p_x_pos, p_y_pos, c_x_pos);
+
+		player_tank_set(&p_x_pos, &p_y_pos,wall_x_pos_1);
+
+		movexy(2, 33); printf("life_count :: p = %d c= %d", p_life_count, c_life_count);
+
+		movexy(2, 30); printf("힘 = ");
+		scanf_s("%d", &power);
+		movexy(2, 31); printf("각 = ");
+		scanf_s("%d", &angle);
+
+		who = parabola_moving(0, p_x_pos + 2, 28, power, angle, p_x_pos, c_x_pos, wall_x_pos_1, wall_x_pos_2); // player attack
+
+		whoes_clear_target(who, p_life_count, c_life_count, p_x_pos, c_x_pos); // boom
+
+		Sleep(1000);
+
+		if (who == 0)// life count
+			c_life_count--;
+
+		movexy(2, 33); printf("life_count :: p = %d c= %d", p_life_count, c_life_count);
+
+		sketch(1, p_x_pos, p_y_pos, c_x_pos);
+
+		if (c_life_count <= 0) // 승 패 판정
+		{
+			word(1, 50, 10, 14);
+			Sleep(1000);
+			break;
+		}
+
+		Sleep(1000);
+
+		for (i = 0; i < 3; i++)
+		{
+			movexy(c_x_pos[i], 28); printf("　");
+		}
+
+		if (wall_x_pos_2 < c_x_pos[1])
+		{
+			c_x_pos[0] = c_x_pos[0] - ((rand() % 10) + 2); // 컴퓨터 랜덤 위치 설정
+			c_x_pos[1] = c_x_pos[0] - 1;
+			c_x_pos[2] = c_x_pos[0] + 1;
+		}
+		else
+		{
+			c_x_pos[0] = c_x_pos[0] + ((rand() % 10) + 2);
+			c_x_pos[1] = c_x_pos[0] - 1;
+			c_x_pos[2] = c_x_pos[0] + 1;
+		}
+
+		sketch(1, p_x_pos, p_y_pos,c_x_pos);
+
+		Sleep(500);
+
+		com_choice_sub = c_x_pos[0] - p_x_pos;
+
+		if (com_choice_sub <= 10) // computer power , angle rand
+		{
+			com_rand_angle_sub = (45 + rand() % 10) + 90;
+			com_rand_power_sub = 13 + rand() % 10;
+		}
+		else if (com_choice_sub > 10 && com_choice_sub <= 20)
+		{
+			com_rand_angle_sub = (45 + rand() % 10) + 90;
+			com_rand_power_sub = 15 + rand() % 10;
+		}
+		else if (com_choice_sub > 20 && com_choice_sub <= 30)
+		{
+			com_rand_angle_sub = (40 + rand() % 10) + 90;
+			com_rand_power_sub = 18 + rand() % 10;
+		}
+		else if (com_choice_sub > 30 && com_choice_sub <= 40)
+		{
+			com_rand_angle_sub = (40 + rand() % 10) + 90;
+			com_rand_power_sub = 20 + rand() % 10;
+		}
+		else if (com_choice_sub > 40 && com_choice_sub <= 50)
+		{
+			com_rand_angle_sub = (35 + rand() % 10) + 90;
+			com_rand_power_sub = 23 + rand() % 10;
+		}
+		else if (com_choice_sub > 50)
+		{
+			com_rand_angle_sub = (35 + rand() % 10) + 90;
+			com_rand_power_sub = 25 + rand() % 10;
+		}
+		else
+		{
+			com_rand_angle_sub = (30 + rand() % 10) + 90;
+			com_rand_power_sub = 28 + rand() % 10;
+		}
+
+		who = parabola_moving(1, c_x_pos[1] - 3, 28, com_rand_power_sub, com_rand_angle_sub, p_x_pos, c_x_pos, wall_x_pos_1, wall_x_pos_2); // computer attack
+
+		whoes_clear_target(who, p_life_count, c_life_count, p_x_pos, c_x_pos); // boom
+
+		Sleep(1000);
+
+		if (who == 1)// life count
+			p_life_count--;
+
+		movexy(2, 33); printf("life_count :: p = %d c= %d", p_life_count, c_life_count);
+
+		sketch(0, p_x_pos, p_y_pos, c_x_pos); // re sketch
+
+		if (p_life_count <= 0) // 승 패 판정
+		{
+			word(2, 50, 10, 14);
+			Sleep(1000);
+			break;
+		}
+
+		Sleep(1000);
+	}
+}
