@@ -1,0 +1,58 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+void main()
+{
+	int i, sub, p_num = 0, c_num = 0, turn = 0, p_score = 0, c_score = 0; //gawibawibo : turn = 0 / p_attack : turn = 1 / c_attack : turn = 2 
+	// game_choose = 1 : 가위바위보 game_choose = 2 : 묵찌빠
+	while(1)
+	{
+		printf("① 묵 ② 찌 ③ 빠\n입력 :: ");
+		scanf_s("%d", &p_num); // P_입력
+
+		srand((unsigned)time(NULL)); // C_난수 초기화
+		c_num = rand() % 3 + 1; // C_난수 발생
+
+		sub = p_num;
+		printf("P - > ");
+		for (i = 0; i < 2; i++) // p_num , c_num 출력
+		{
+			if( i == 1 )
+				printf("C - > ");
+
+			if ( sub == 1)
+				printf("① 묵\n");
+			else if ( sub == 2 )
+				printf("② 찌\n");
+			else if ( sub == 3 )
+				printf("③ 빠\n");
+
+			sub = c_num;
+		}
+
+		if (p_num == 1 && c_num == 2 || p_num == 2 && c_num == 3 || p_num == 3 && c_num == 1) // 가위바위보 패 / 묵찌빠 P 공
+		{
+			turn = 1;
+			printf("\nPlayer Attack ->\n");
+		}
+		else if (p_num == 1 && c_num == 3 || p_num == 2 && c_num == 1 || p_num == 3 && c_num == 2) // 가위바위보 승 / 묵찌빠 C 공
+		{
+			turn = 2;
+			printf("\nComputer Attack ->\n");
+		}
+		if (p_num - c_num == 0 && turn == 0) // 가위바위보 무승부
+			printf("무승부 입니다.\n\n");
+		else if (p_num - c_num == 0 && turn == 1) // 묵찌빠 P 승
+		{
+			p_score++;
+			printf("Player %d Win\n\n", p_score);
+		}
+		else if (p_num - c_num == 0 && turn == 2) // 묵찌빠 C 승
+		{
+			c_score++;
+			printf("Computer %d Win\n\n", c_score);
+		}
+		if (p_num-c_num==0) // 가위 바위 보 재귀
+			turn = 0;
+	}
+}
